@@ -1,2 +1,2 @@
-# Terminator_XE
-Just a python chess bot
+# Orange horizon
+A python chess bot which doesn't use a neural network. 
