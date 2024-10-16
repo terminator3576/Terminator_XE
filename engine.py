@@ -2,40 +2,9 @@ import chess
 import tactics
 import checkmate
 import time
+import openings
 
 EARLY_GAME_MOVE_LIMIT = 10  # Define early game as the first 10 moves
-
-# Opening book for Black: List of moves. Each sub-list is the sequence of moves in UCI format
-OPENING_BOOK = [
-    # Sicilian Defense
-    ["e2e4", "c7c5", "g1f3", "a7a6", "f1c4", "e7e6"],
-    ["e2e4", "c7c5", "g1f3", "a7a6", "d2d4", "c5d4"],
-    ["e2e4", "c7c5", "d2d4", "c5d4", "d1d4", "b8c6"],
-    ["e2e4", "c7c5", "d2d4", "c5d4", "g1f3", "b8c6"],
-    ["e2e4", "c7c5", "d2d4", "b1c3", "a7a6", "g1f3", "b8c6"],
-    ["e2e4", "c7c5", "d2d4", "b1c3", "a7a6", "g1e2", "b8c6"],
-    ["e2e4", "c7c5", "b1c3", "b8c6", "d2d4", "c5d4", "c3d4", "g8f6"],
-    ["e2e4", "c7c5", "b1c3", "b8c6", "f2f4", "g8f6"],
-    ["e2e4", "c7c5", "b2b3", "g7g6", "c1b2", "g8f6", "e4e5", "f6d5", "e5e6", "f7f6"],
-
-    # Queen's Gambit Declined
-    ["d2d4", "d7d5", "c2c4", "e7e6", "g1f3", "g8f6"],
-    ["d2d4", "d7d5", "c2c4", "e7e6", "b1c3","f8e7"],
-    ["d2d4", "d7d5", "c2c4", "e7e6", "e2e3", "g8f6"],
-
-    ["c2c4", "e7e5", "g1f3", "b8c6", "b1c3", "g8f6"],
-    ["c2c4", "e7e5", "g1f3", "b8c6", "e2e3", "g8f6"],
-    ["c2c4", "e7e5", "g1f3", "b8c6", "d2d4", "e5d4"],
-    ["c2c4", "e7e5", "g1f3", "g8f6", "b1c3", "b8c6"],
-
-    ["b1c3", "e7e5", "g1f3", "b8c6", "b8c6"],
-    ["b1c3", "e7e5", "g1f3", "b8c6", "e2e3"],
-    ["b1c3", "e7e5", "g1f3", "b8c6", "d2d4", "e5d4"],
-    ["b1c3", "e7e5", "e2e5"],
-
-    ["f2f3", "e7e5"],
-]
-
 
 PAWN_TABLE = [
     100, 100, 100, 100, 100, 100, 100, 100,
@@ -232,6 +201,7 @@ def check_development_penalty(board, move_number, expected_development_by_move=1
 
     # Check for undeveloped pieces on the board
     if board.turn == chess.WHITE:
+        # For white's turn
         for piece_type, positions in undeveloped_positions_white.items():
             for pos in positions:
                 if board.piece_at(pos) is not None and board.piece_at(pos).color == chess.WHITE:
@@ -239,6 +209,7 @@ def check_development_penalty(board, move_number, expected_development_by_move=1
                     penalty += 1  # Add penalty for each undeveloped piece
 
     else:
+        # For black's turn
         for piece_type, positions in undeveloped_positions_black.items():
             for pos in positions:
                 if board.piece_at(pos) is not None and board.piece_at(pos).color == chess.BLACK:
@@ -513,6 +484,8 @@ def evaluate_board(board):
 
     return value
 
+
+# Function to check if the current position is a checkmate
 def is_checkmate(board):
     return board.is_checkmate()
 
@@ -540,7 +513,7 @@ def find_best_move_with_mate_in_one_prevention(board):
                 best_value = eval_value
                 best_move = move
 
-        board.pop()
+        board.pop()  # Undo the move
 
     return best_move
 
@@ -552,7 +525,7 @@ def detect_mate_in_one(board):
         board.push(move)
         if board.is_checkmate():
             board.pop()
-            return move 
+            return move  # Return the move that causes checkmate
         board.pop()
     return None
 
@@ -606,30 +579,17 @@ def minimax(board, depth, alpha, beta, maximizing_player, last_move=None):
                 break
         return min_eval, best_move
 
-
-def find_opening_move(board, opening_book):
-    move_history = [move.uci() for move in board.move_stack]
-    for moves in opening_book:
-        if move_history == moves[:len(move_history)]:
-            if len(move_history) < len(moves):
-                return moves[len(move_history)]  # Return the next move in the sequence
-    return None
-
 def run_chess_bot(board, depth=4):
-    """
-    Runs the AI to choose the best move using Minimax with Alpha-Beta Pruning or the opening book.
-    """
     move_history = list(board.move_stack)
 
     # Use opening book if the current move sequence matches any sequence in the book
-    opening_move_str = find_opening_move(board, OPENING_BOOK)
+    opening_move = openings.find_move_in_book(board)
 
-    if opening_move_str:
-        opening_move = chess.Move.from_uci(opening_move_str)
-
-        # Check if the move is legal
-        if opening_move in board.legal_moves:
-            return opening_move
+    if opening_move:
+        print(opening_move)
+        opening_move = chess.Move.from_uci(opening_move)
+        # Convert the UCI string move from the opening book to a chess.Move object
+        return opening_move
 
 	
     # Check for mate in one
@@ -645,7 +605,7 @@ def run_chess_bot(board, depth=4):
         return best_move
 
     bot_color = chess.WHITE if board.turn == chess.WHITE else chess.BLACK
-        # Check for mate in three
+        # Check for mate
     time_limit = 5.0
     mate_three = detect_mate_in_three(board, bot_color, time_limit)
     print(mate_three)
@@ -659,13 +619,12 @@ def run_chess_bot(board, depth=4):
     # Set depth based on the number of legal moves
     if legal_moves_count == 1:
         depth = 1
-    elif legal_moves_count < 5:
-        depth = 5
     elif legal_moves_count < 11:
         depth = 4
     else:
         depth = 3
 
     # Proceed with minimax for the best move
+    print("minimax")
     _, best_move = minimax(board, depth, -float('inf'), float('inf'), board.turn == chess.WHITE)
     return best_move
