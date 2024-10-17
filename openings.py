@@ -3,7 +3,8 @@ import chess
 
 def find_move_in_book(board, book_file="Book.txt"):
     fen_input = board.fen().strip()  # Ensure FEN is stripped of any surrounding whitespace
-    fen_input = fen_input.replace(" 0 1", "") # Replace "0 1" with an empty string to remove it
+    pos = fen_input.find("-")
+    fen_input = fen_input[:pos].strip()
     print(fen_input)
     try:
         with open(book_file, 'r') as file:
@@ -17,6 +18,8 @@ def find_move_in_book(board, book_file="Book.txt"):
 
             if line.startswith('pos'):  # Line defines a new FEN position
                 current_fen = line.split('pos ', 1)[1].strip()  # Handle splitting safely
+                pos = current_fen.find("-")
+                current_fen = current_fen[:pos].strip()
                 if current_fen == fen_input:
                     fen_found = True
                     moves = []  # Reset moves for the matching position
